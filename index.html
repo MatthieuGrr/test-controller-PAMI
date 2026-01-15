@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Simulateur Robot - Contrôle par Point Offset</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: clamp(18px, 5vw, 24px);
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .canvas-container {
+            background: white;
+            border-radius: 15px;
+            padding: 10px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        #canvas {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 10px;
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .info-card h3 {
+            font-size: 14px;
+            color: #667eea;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-content {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(245, 87, 108, 0.4);
+        }
+
+        .legend {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .legend h3 {
+            font-size: 14px;
+            color: #667eea;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .legend-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .instruction {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .parameters {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .parameters h3 {
+            font-size: 14px;
+            color: #667eea;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        .param-control {
+            margin-bottom: 15px;
+        }
+
+        .param-control label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 5px;
+        }
+
+        .param-control input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .param-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        .param-control input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        .param-value {
+            display: inline-block;
+            min-width: 60px;
+            text-align: right;
+            font-weight: bold;
+            color: #667eea;
+            font-size: 13px;
+        }
+
+        @media (max-width: 600px) {
+            .info-panel {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="instruction">
+            👆 Cliquez ou touchez le canvas pour définir un objectif
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="canvas" width="800" height="600"></canvas>
+        </div>
+
+        <div class="parameters">
+            <h3>Paramètres</h3>
+            <div class="param-control">
+                <label>
+                    Distance offset (b): <span class="param-value" id="offsetValue">10.0 cm</span>
+                </label>
+                <input type="range" id="offsetSlider" min="1" max="30" step="0.5" value="10">
+            </div>
+            <div class="param-control">
+                <label>
+                    Gain K: <span class="param-value" id="kValue">2.0</span>
+                </label>
+                <input type="range" id="kSlider" min="0.5" max="5" step="0.1" value="2">
+            </div>
+            <div class="param-control">
+                <label>
+                    Vitesse max P: <span class="param-value" id="maxSpeedValue">50 cm/s</span>
+                </label>
+                <input type="range" id="maxSpeedSlider" min="10" max="100" step="5" value="50">
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <div class="info-card">
+                <h3>État Robot</h3>
+                <div class="info-content" id="stateInfo">
+                    x: 0.0 cm<br>
+                    y: 0.0 cm<br>
+                    θ: 0.0°<br>
+                    v: 0.0 cm/s<br>
+                    ω: 0.0 °/s
+                </div>
+            </div>
+
+            <div class="info-card">
+                <h3>Commandes PWM</h3>
+                <div class="info-content" id="pwmInfo">
+                    Gauche: 0<br>
+                    Droite: 0<br>
+                    v_L: 0.0 cm/s<br>
+                    v_R: 0.0 cm/s
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="resetRobot()">🔄 Reset Position</button>
+            <button class="btn btn-secondary" onclick="clearTrajectory()">🗑️ Effacer Trajectoire</button>
+        </div>
+
+        <div class="legend">
+            <h3>Légende</h3>
+            <div class="legend-item">
+                <div class="legend-icon" style="background: #4a90d9;"></div>
+                <span>Robot</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-icon" style="background: #00cc00;"></div>
+                <span>Point offset P</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-icon" style="background: #ff4444;"></div>
+                <span>Objectif</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-icon" style="background: #999;"></div>
+                <span>Trajectoire</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =============================================================================
+        // PARAMÈTRES DU ROBOT
+        // =============================================================================
+        const WHEEL_DIAMETER = 6.430;
+        const WHEEL_RADIUS = WHEEL_DIAMETER / 2;
+        const WHEELBASE = 13.34;
+
+        const PWM_MIN = 145;
+        const PWM_MAX = 255;
+
+        // Paramètres ajustables
+        let offsetDistance = 10.0;
+        let kGain = 2.0;
+        let maxPSpeed = 50.0;
+
+        const DT = 0.05;
+        let SCALE = 3;
+
+        // =============================================================================
+        // CLASSE ROBOT
+        // =============================================================================
+        class DifferentialRobot {
+            constructor(x = 0, y = 0, theta = 0) {
+                this.x = x;
+                this.y = y;
+                this.theta = theta;
+                this.v = 0;
+                this.omega = 0;
+                this.pwm_left = 0;
+                this.pwm_right = 0;
+            }
+
+            getOffsetPoint(b) {
+                const Px = this.x + b * Math.cos(this.theta);
+                const Py = this.y + b * Math.sin(this.theta);
+                return [Px, Py];
+            }
+
+            computeControl(target_x, target_y, b, k, max_speed) {
+                const [Px, Py] = this.getOffsetPoint(b);
+
+                let error_x = target_x - Px;
+                let error_y = target_y - Py;
+
+                const distance = Math.sqrt(error_x ** 2 + error_y ** 2);
+
+                let Pdot_x_desired = k * error_x;
+                let Pdot_y_desired = k * error_y;
+
+                const speed_desired = Math.sqrt(Pdot_x_desired ** 2 + Pdot_y_desired ** 2);
+                if (speed_desired > max_speed) {
+                    const scale = max_speed / speed_desired;
+                    Pdot_x_desired *= scale;
+                    Pdot_y_desired *= scale;
+                }
+
+                const cos_theta = Math.cos(this.theta);
+                const sin_theta = Math.sin(this.theta);
+
+                const v = cos_theta * Pdot_x_desired + sin_theta * Pdot_y_desired;
+                const omega = (-sin_theta / b) * Pdot_x_desired + (cos_theta / b) * Pdot_y_desired;
+
+                return [v, omega, distance];
+            }
+
+            velocityToPWM(v, omega) {
+                const L = WHEELBASE;
+
+                const v_left = v - (L / 2) * omega;
+                const v_right = v + (L / 2) * omega;
+
+                const MAX_WHEEL_SPEED = 50;
+
+                const speedToPWM = (speed) => {
+                    if (Math.abs(speed) < 1) return 0;
+
+                    let normalized = speed / MAX_WHEEL_SPEED;
+                    normalized = Math.max(-1, Math.min(1, normalized));
+
+                    let pwm;
+                    if (normalized > 0) {
+                        pwm = PWM_MIN + (PWM_MAX - PWM_MIN) * normalized;
+                    } else {
+                        pwm = -PWM_MIN + (-PWM_MAX + PWM_MIN) * normalized;
+                    }
+
+                    return Math.round(pwm);
+                };
+
+                const pwm_left = speedToPWM(v_left);
+                const pwm_right = speedToPWM(v_right);
+
+                return [pwm_left, pwm_right, v_left, v_right];
+            }
+
+            update(v, omega, dt) {
+                this.v = v;
+                this.omega = omega;
+
+                if (Math.abs(omega) < 0.001) {
+                    this.x += v * Math.cos(this.theta) * dt;
+                    this.y += v * Math.sin(this.theta) * dt;
+                } else {
+                    this.x += (v / omega) * (Math.sin(this.theta + omega * dt) - Math.sin(this.theta));
+                    this.y += (v / omega) * (-Math.cos(this.theta + omega * dt) + Math.cos(this.theta));
+                    this.theta += omega * dt;
+                }
+
+                this.theta = Math.atan2(Math.sin(this.theta), Math.cos(this.theta));
+            }
+        }
+
+        // =============================================================================
+        // SIMULATION
+        // =============================================================================
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Adaptation du canvas à la largeur de l'écran
+        function resizeCanvas() {
+            const container = document.querySelector('.canvas-container');
+            const containerWidth = container.clientWidth - 20; // padding
+            const maxWidth = 800;
+            const maxHeight = 600;
+
+            if (containerWidth < maxWidth) {
+                const scale = containerWidth / maxWidth;
+                canvas.style.width = containerWidth + 'px';
+                canvas.style.height = (maxHeight * scale) + 'px';
+            } else {
+                canvas.style.width = maxWidth + 'px';
+                canvas.style.height = maxHeight + 'px';
+            }
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const center_x = canvas.width / (2 * SCALE);
+        const center_y = canvas.height / (2 * SCALE);
+        const robot = new DifferentialRobot(center_x, center_y, 0);
+
+        let target_x = null;
+        let target_y = null;
+        let running = false;
+        let trajectory = [];
+
+        // Gestionnaires des sliders
+        const offsetSlider = document.getElementById('offsetSlider');
+        const kSlider = document.getElementById('kSlider');
+        const maxSpeedSlider = document.getElementById('maxSpeedSlider');
+
+        offsetSlider.addEventListener('input', (e) => {
+            offsetDistance = parseFloat(e.target.value);
+            document.getElementById('offsetValue').textContent = offsetDistance.toFixed(1) + ' cm';
+        });
+
+        kSlider.addEventListener('input', (e) => {
+            kGain = parseFloat(e.target.value);
+            document.getElementById('kValue').textContent = kGain.toFixed(1);
+        });
+
+        maxSpeedSlider.addEventListener('input', (e) => {
+            maxPSpeed = parseFloat(e.target.value);
+            document.getElementById('maxSpeedValue').textContent = maxPSpeed + ' cm/s';
+        });
+
+        function toCanvas(x, y) {
+            return [x * SCALE, y * SCALE];
+        }
+
+        function fromCanvas(cx, cy) {
+            return [cx / SCALE, cy / SCALE];
+        }
+
+        function handleCanvasClick(event) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const cx = (event.clientX - rect.left) * scaleX;
+            const cy = (event.clientY - rect.top) * scaleY;
+
+            [target_x, target_y] = fromCanvas(cx, cy);
+            running = true;
+        }
+
+        canvas.addEventListener('click', handleCanvasClick);
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            handleCanvasClick(touch);
+        });
+
+        function resetRobot() {
+            robot.x = center_x;
+            robot.y = center_y;
+            robot.theta = 0;
+            robot.v = 0;
+            robot.omega = 0;
+            target_x = null;
+            target_y = null;
+            running = false;
+            clearTrajectory();
+        }
+
+        function clearTrajectory() {
+            trajectory = [];
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Grille
+            ctx.strokeStyle = '#eee';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.width; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+            }
+            for (let i = 0; i < canvas.height; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvas.width, i);
+                ctx.stroke();
+            }
+
+            // Trajectoire
+            if (trajectory.length > 1) {
+                ctx.strokeStyle = '#999';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const [x0, y0] = toCanvas(...trajectory[0]);
+                ctx.moveTo(x0, y0);
+                for (let i = 1; i < trajectory.length; i++) {
+                    const [x, y] = toCanvas(...trajectory[i]);
+                    ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+
+            // Objectif
+            if (target_x !== null) {
+                const [tx, ty] = toCanvas(target_x, target_y);
+                ctx.fillStyle = '#ff4444';
+                ctx.strokeStyle = '#cc0000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(tx, ty, 8, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ff4444';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Objectif', tx, ty - 15);
+            }
+
+            // Robot
+            const [rx, ry] = toCanvas(robot.x, robot.y);
+            const robot_size = WHEELBASE * SCALE / 2;
+
+            const cos_t = Math.cos(robot.theta);
+            const sin_t = Math.sin(robot.theta);
+
+            // Corps du robot
+            const w = robot_size;
+            const h = robot_size * 0.6;
+
+            ctx.fillStyle = '#4a90d9';
+            ctx.strokeStyle = '#2c5aa0';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(rx + w * cos_t - h * sin_t, ry + w * sin_t + h * cos_t);
+            ctx.lineTo(rx - w * cos_t - h * sin_t, ry - w * sin_t + h * cos_t);
+            ctx.lineTo(rx - w * cos_t + h * sin_t, ry - w * sin_t - h * cos_t);
+            ctx.lineTo(rx + w * cos_t + h * sin_t, ry + w * sin_t - h * cos_t);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Flèche de direction
+            const arrow_len = robot_size * 1.2;
+            const ax = rx + arrow_len * cos_t;
+            const ay = ry + arrow_len * sin_t;
+
+            ctx.strokeStyle = '#2c5aa0';
+            ctx.fillStyle = '#2c5aa0';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(rx, ry);
+            ctx.lineTo(ax, ay);
+            ctx.stroke();
+
+            // Pointe de la flèche
+            const arrowSize = 8;
+            ctx.beginPath();
+            ctx.moveTo(ax, ay);
+            ctx.lineTo(
+                ax - arrowSize * cos_t + arrowSize * 0.5 * sin_t,
+                ay - arrowSize * sin_t - arrowSize * 0.5 * cos_t
+            );
+            ctx.lineTo(
+                ax - arrowSize * cos_t - arrowSize * 0.5 * sin_t,
+                ay - arrowSize * sin_t + arrowSize * 0.5 * cos_t
+            );
+            ctx.closePath();
+            ctx.fill();
+
+            // Roues
+            ctx.fillStyle = 'black';
+            for (let side of [-1, 1]) {
+                const wx = rx + side * (h * 0.8) * (-sin_t);
+                const wy = ry + side * (h * 0.8) * cos_t;
+                ctx.beginPath();
+                ctx.ellipse(wx, wy, 8, 4, robot.theta + Math.PI / 2, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            // Point offset P
+            const [Px, Py] = robot.getOffsetPoint(offsetDistance);
+            const [px, py] = toCanvas(Px, Py);
+
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 2]);
+            ctx.beginPath();
+            ctx.moveTo(rx, ry);
+            ctx.lineTo(px, py);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = '#00cc00';
+            ctx.strokeStyle = '#009900';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(px, py, 6, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = 'green';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('P', px, py - 12);
+
+            // Ligne P -> objectif
+            if (target_x !== null) {
+                const [tx, ty] = toCanvas(target_x, target_y);
+                ctx.strokeStyle = 'orange';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 2]);
+                ctx.beginPath();
+                ctx.moveTo(px, py);
+                ctx.lineTo(tx, ty);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        function simulate() {
+            if (running && target_x !== null) {
+                const [v, omega, distance] = robot.computeControl(
+                    target_x, target_y, offsetDistance, kGain, maxPSpeed
+                );
+
+                const [pwm_left, pwm_right, v_left, v_right] = robot.velocityToPWM(v, omega);
+                robot.pwm_left = pwm_left;
+                robot.pwm_right = pwm_right;
+
+                robot.update(v, omega, DT);
+
+                trajectory.push([robot.x, robot.y]);
+                if (trajectory.length > 1000) {
+                    trajectory = trajectory.slice(-500);
+                }
+
+                if (distance < 2) {
+                    running = false;
+                }
+
+                document.getElementById('pwmInfo').innerHTML =
+                    `Gauche: ${pwm_left >= 0 ? '+' : ''}${pwm_left}<br>` +
+                    `Droite: ${pwm_right >= 0 ? '+' : ''}${pwm_right}<br>` +
+                    `v_L: ${v_left >= 0 ? '+' : ''}${v_left.toFixed(1)} cm/s<br>` +
+                    `v_R: ${v_right >= 0 ? '+' : ''}${v_right.toFixed(1)} cm/s`;
+            } else {
+                document.getElementById('pwmInfo').innerHTML =
+                    'Gauche: 0<br>Droite: 0<br><br>(en attente)';
+            }
+
+            const theta_deg = robot.theta * 180 / Math.PI;
+            const omega_deg = robot.omega * 180 / Math.PI;
+            document.getElementById('stateInfo').innerHTML =
+                `x: ${robot.x.toFixed(1)} cm<br>` +
+                `y: ${robot.y.toFixed(1)} cm<br>` +
+                `θ: ${theta_deg >= 0 ? '+' : ''}${theta_deg.toFixed(1)}°<br>` +
+                `v: ${robot.v >= 0 ? '+' : ''}${robot.v.toFixed(1)} cm/s<br>` +
+                `ω: ${omega_deg >= 0 ? '+' : ''}${omega_deg.toFixed(1)} °/s`;
+
+            draw();
+        }
+
+        setInterval(simulate, DT * 1000);
+    </script>
+</body>
+</html>
